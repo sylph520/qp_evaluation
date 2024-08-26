@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+import os
 import sys
 sys.path.append('../evaluation/')
 
@@ -54,8 +55,7 @@ class Args:
     save_path = 'results/cost/avgdl/stats/'
 args = Args()
 
-import os
-save_path = args.save_path 
+save_path = args.save_path
 if not os.path.exists(save_path):
     os.makedirs(save_path)
 

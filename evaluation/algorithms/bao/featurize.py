@@ -1,16 +1,18 @@
+from TreeConvolution.util import *
 import numpy as np
 
 JOIN_TYPES = ['Hash Join', 'Nested Loop', 'Merge Join', 'Other Join']
-SCAN_TYPES = ["Seq Scan", "Index Scan", "Index Only Scan", "Bitmap Index Scan", 
+SCAN_TYPES = ["Seq Scan", "Index Scan", "Index Only Scan", "Bitmap Index Scan",
               'Bitmap Heap Scan', 'Subquery Scan']
 ALL_TYPES = JOIN_TYPES + SCAN_TYPES
 
 
 class Batch():
-    def __init__(self,trees, idxes):
+    def __init__(self, trees, idxes):
         self.trees = trees
         self.idxes = idxes
-    def to(self,dev):
+
+    def to(self, dev):
         self.trees = self.trees.to(dev)
         self.idxes = self.idxes.to(dev)
         return self
@@ -21,15 +23,18 @@ def left_child(x):
         return None
     return x[1]
 
+
 def right_child(x):
     if len(x) != 3:
         return None
     return x[2]
 
+
 def features(x):
     if isinstance(x, tuple):
         return x[0]
     return x
+
 
 def collate(x):
     trees = []
@@ -40,12 +45,14 @@ def collate(x):
         targets.append(target)
 
     targets = torch.FloatTensor(targets).reshape(-1, 1)
-    flat_trees, indexes = prepare_trees(trees, features, left_child, right_child)
+    flat_trees, indexes = prepare_trees(
+        trees, features, left_child, right_child)
     return Batch(flat_trees, indexes), targets
 
-from TreeConvolution.util import *
+
 def prepare_trees(trees, transformer, left_child, right_child, cuda=False):
-    flat_trees = [flatten(x, transformer, left_child, right_child) for x in trees]
+    flat_trees = [flatten(x, transformer, left_child, right_child)
+                  for x in trees]
     flat_trees = pad_and_combine(flat_trees)
     flat_trees = torch.Tensor(flat_trees)
 
@@ -59,13 +66,14 @@ def prepare_trees(trees, transformer, left_child, right_child, cuda=False):
     return (flat_trees, indexes)
 
 
-
 class TreeBuilderError(Exception):
     def __init__(self, msg):
         self.__msg = msg
 
+
 def is_join(node):
     return len(node.children) >= 2
+
 
 def is_scan(node):
     if node.children == []:
@@ -76,7 +84,8 @@ def is_scan(node):
 class TreeBuilder:
     def __init__(self, stats_extractor, relations):
         self.__stats = stats_extractor
-        self.__relations = sorted(relations, key=lambda x: len(x), reverse=True)
+        self.__relations = sorted(
+            relations, key=lambda x: len(x), reverse=True)
 
 #     def __relation_name(self, node):
 #         if "Relation Name" in node:
@@ -95,7 +104,7 @@ class TreeBuilder:
 #             raise TreeBuilderError("Could not find relation name for bitmap index scan")
 
 #         raise TreeBuilderError("Cannot extract relation type from node")
-                
+
     def __featurize_join(self, node):
         assert is_join(node)
         arr = np.zeros(len(ALL_TYPES))
@@ -116,43 +125,43 @@ class TreeBuilder:
     def plan_to_feature_tree(self, root):
         children = root.children
 
-       
         if is_join(root):
             assert len(children) >= 2
             my_vec = self.__featurize_join(root)
             left = self.plan_to_feature_tree(children[0])
             right = self.plan_to_feature_tree(children[1])
-            
+
             if len(children) == 3:
                 mid = self.plan_to_feature_tree(children[2])
-    #             print(mid)
+                # print(mid)
                 return (my_vec, mid, (my_vec, left, right))
-    
+
             return (my_vec, left, right)
 
         if is_scan(root):
             if root.children == []:
                 return self.__featurize_scan(root)
             else:
-    #           select only the first node, which is the root of the subquery
+                # select only the first node, which is the root of the subquery
                 if isinstance(self.plan_to_feature_tree(root.children[0]), tuple):
-    #               when subquery is a complex query
+                    # when subquery is a complex query
                     my_vec = self.plan_to_feature_tree(root.children[0])[0]
                 else:
-    #               when subquery has only one scan
+                    # when subquery has only one scan
                     my_vec = self.plan_to_feature_tree(root.children[0])
                 my_vec[-1] = 1
                 return my_vec
 
-        
         if len(children) == 1:
             return self.plan_to_feature_tree(children[0])
 
+        raise TreeBuilderError(
+            "Node wasn't transparent, a join, or a scan: " + str(plan))
 
-        raise TreeBuilderError("Node wasn't transparent, a join, or a scan: " + str(plan))
 
 def norm(x, lo, hi):
     return (np.log(x + 1) - lo) / (hi - lo)
+
 
 def get_buffer_count_for_leaf(leaf, buffers):
     total = 0
@@ -163,6 +172,7 @@ def get_buffer_count_for_leaf(leaf, buffers):
         total += buffers.get(leaf.index, 0)
 
     return total
+
 
 class StatExtractor:
     def __init__(self, fields, mins, maxs):
@@ -179,11 +189,12 @@ class StatExtractor:
                 res.append(norm(f, lo, hi))
         return res
 
+
 def get_plan_stats(roots):
     costs = []
     rows = []
     bufs = []
-    
+
     def recurse(n):
         costs.append(n.cost_est)
         rows.append(n.card_est)
@@ -200,7 +211,7 @@ def get_plan_stats(roots):
     costs = np.array(costs)
     rows = np.array(rows)
     bufs = np.array(bufs)
-    
+
     costs = np.log(costs + 1)
     rows = np.log(rows + 1)
     bufs = np.log(bufs + 1)
@@ -224,11 +235,11 @@ def get_plan_stats(roots):
 #             [costs_min, rows_min],
 #             [costs_max, rows_max]
 #         )
-        
+
 
 def get_all_relations(data):
     all_rels = []
-    
+
     def recurse(root):
         if root.table:
             yield root.table
@@ -239,8 +250,9 @@ def get_all_relations(data):
 
     for root in data:
         all_rels.extend(list(recurse(root)))
-        
+
     return set(all_rels)
+
 
 def get_featurized_trees(data):
     all_rels = get_all_relations(data)
@@ -252,8 +264,9 @@ def get_featurized_trees(data):
     for root in data:
         tree = t.plan_to_feature_tree(root)
         trees.append(tree)
-            
+
     return trees
+
 
 def _attach_buf_data(root):
     if not root.buffers:
@@ -266,11 +279,12 @@ def _attach_buf_data(root):
             for child in n.children:
                 recurse(child)
             return
-        
+
         # it is a leaf
         n.buffers = get_buffer_count_for_leaf(n, buffers)
 
     recurse(root)
+
 
 class TreeFeaturizer:
     def __init__(self):

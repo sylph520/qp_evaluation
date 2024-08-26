@@ -1,13 +1,14 @@
 import pandas as pd
 import numpy as np
 
-class Normalizer(): # in log scale
-    def __init__(self, mini=None,maxi=None):
+
+class Normalizer():  # in log scale
+    def __init__(self, mini=None, maxi=None):
         self.mini = mini
         self.maxi = maxi
-        
-    def normalize_labels(self, labels, reset_min_max = False):
-        ## added 0.001 for numerical stability
+
+    def normalize_labels(self, labels, reset_min_max=False):
+        # added 0.001 for numerical stability
         labels = np.array([np.log(float(l) + 0.001) for l in labels])
         if self.mini is None or reset_min_max:
             self.mini = labels.min()
@@ -22,12 +23,12 @@ class Normalizer(): # in log scale
 
         return labels_norm
 
-    def normalize_label(self,label):
+    def normalize_label(self, label):
         label_norm = ((np.log(float(label)+0.001)) - self.mini) / (self.maxi - self.mini)
         label_norm = np.minimum(label_norm, 1)
-        label_norm = np.maximum(label_norm, 0.001)        
+        label_norm = np.maximum(label_norm, 0.001)
         return label_norm
-    
+
     def unnormalize_labels(self, labels_norm):
         labels_norm = np.array(labels_norm, dtype=np.float32)
         labels = (labels_norm * (self.maxi - self.mini)) + self.mini

@@ -1,3 +1,4 @@
+from feature_extractor import traversePlan, DatasetInfo
 import pandas as pd
 import numpy as np
 import json
@@ -7,20 +8,19 @@ import time
 import sys
 sys.path.append('../evaluation/')
 
-from feature_extractor import traversePlan, DatasetInfo
 
 def get_col_min_max(minmax_df):
     col_min_max = {}
     for i, row in minmax_df.iterrows():
-        if not 'name' in row:
+        if 'name' not in row:
             name = '.'.join((row['table'], row['column']))
         else:
             name = row['name']
         try:
             float(row['min'])
-            col_min_max[name] = [float(row['min']),float(row['max'])]
+            col_min_max[name] = [float(row['min']), float(row['max'])]
         except:
-            if len(row['min'])>15:
+            if len(row['min']) > 15:
                 d = datetime.strptime(row['min'], '%Y-%m-%d %H:%M:%S')
                 try:
                     mi = d.timestamp()
@@ -39,7 +39,8 @@ def get_col_min_max(minmax_df):
             col_min_max[name] = [mi, ma]
     return col_min_max
 
-def get_costs(js_nodes): 
+
+def get_costs(js_nodes):
     costs = []
     for js_node in js_nodes:
         if 'Execution Time' in js_node:
@@ -47,6 +48,7 @@ def get_costs(js_nodes):
         else:
             costs.append(js_node['Actual Total Time'])
     return costs
+
 
 def get_index(df):
     idx_list = []
@@ -57,17 +59,18 @@ def get_index(df):
         else:
             qid = i
             js_str = row['Plan_dump']
-            
+
         if js_str == 'failed':
             continue
-            
+
         for item in js_str.split(','):
             if item.startswith(' "Index Name"'):
                 if item.split(':')[-1] not in idx_list:
                     item_part = item.split(':')[-1]
                     idx_list.append(item_part.split("\"")[-2])
-                    
+
     return list(set(idx_list))
+
 
 def df2nodes(df):
     t0 = time.time()
@@ -81,7 +84,7 @@ def df2nodes(df):
         else:
             idx = i
             js_str = row['Plan_dump']
-            
+
         if js_str == 'failed':
             continue
         js_node = json.loads(js_str)
@@ -91,6 +94,7 @@ def df2nodes(df):
         idxs.append(idx)
     print('length: ', len(idxs), ', Time: ',  time.time()-t0)
     return roots, js_nodes, idxs
+
 
 def get_imdb(dat_path):
     df = pd.DataFrame()
@@ -122,25 +126,26 @@ def get_imdb(dat_path):
     job_light_costs = get_costs(job_light_js_nodes)
 
     return {
-        'ds_info' : ds_info,
-        'data_raw' : df,
-        'indexes' : index_list,
-        'col_min_max' : col_min_max,
-        'total_roots' : roots,
-        'total_costs' : costs,
-        'train_roots' : train_roots,
-        'train_costs' : train_costs,
-        'train_js_nodes' : train_js_nodes,
-        'val_roots' : val_roots,
-        'val_costs' : val_costs,
-        'val_js_nodes' : val_js_nodes,
-        'syn_roots' : syn_roots,
-        'syn_js_nodes' : syn_js_nodes,
-        'syn_costs' : syn_costs,
-        'job_light_roots' : job_light_roots,
-        'job_light_js_nodes' : job_light_js_nodes,
-        'job_light_costs' : job_light_costs,
+        'ds_info': ds_info,
+        'data_raw': df,
+        'indexes': index_list,
+        'col_min_max': col_min_max,
+        'total_roots': roots,
+        'total_costs': costs,
+        'train_roots': train_roots,
+        'train_costs': train_costs,
+        'train_js_nodes': train_js_nodes,
+        'val_roots': val_roots,
+        'val_costs': val_costs,
+        'val_js_nodes': val_js_nodes,
+        'syn_roots': syn_roots,
+        'syn_js_nodes': syn_js_nodes,
+        'syn_costs': syn_costs,
+        'job_light_roots': job_light_roots,
+        'job_light_js_nodes': job_light_js_nodes,
+        'job_light_costs': job_light_costs,
     }
+
 
 def get_tpch(dat_path):
     df = pd.read_csv(dat_path+'long_raw.csv')
@@ -155,33 +160,33 @@ def get_tpch(dat_path):
     ds_info.construct_from_plans(roots)
     ds_info.get_columns(col_min_max)
 
-    ## split by run_id, TODO, split by query (template) id
+    # split by run_id, TODO, split by query (template) id
     runs = df['Run_id'].unique()
-    train_runs, val_runs, test_runs = np.split(runs,[35,45,],axis=0)
+    train_runs, val_runs, test_runs = np.split(runs, [35, 45, ], axis=0)
     train_ids = df.loc[df['Run_id'].isin(train_runs)].index.tolist()
     val_ids = df.loc[df['Run_id'].isin(val_runs)].index.tolist()
     test_ids = df.loc[df['Run_id'].isin(test_runs)].index.tolist()
 
     return {
-        'ds_info' : ds_info,
-        'data_raw' : df,
-        'indexes' : index_list,
-        'col_min_max' : col_min_max,
-        'total_roots' : roots,
-        'total_costs' : costs,
-        'train_roots' : [roots[idx] for idx in train_ids],
-        'train_costs' : [costs[idx] for idx in train_ids],
-        'train_js_nodes' : [js_nodes[idx] for idx in train_ids],
-        'val_roots' : [roots[idx] for idx in val_ids],
-        'val_costs' : [costs[idx] for idx in val_ids],
-        'val_js_nodes' : [js_nodes[idx] for idx in val_ids],
-        'test_roots' : [roots[idx] for idx in test_ids],
-        'test_js_nodes' : [js_nodes[idx] for idx in test_ids],
-        'test_costs' : [costs[idx] for idx in test_ids],
+        'ds_info': ds_info,
+        'data_raw': df,
+        'indexes': index_list,
+        'col_min_max': col_min_max,
+        'total_roots': roots,
+        'total_costs': costs,
+        'train_roots': [roots[idx] for idx in train_ids],
+        'train_costs': [costs[idx] for idx in train_ids],
+        'train_js_nodes': [js_nodes[idx] for idx in train_ids],
+        'val_roots': [roots[idx] for idx in val_ids],
+        'val_costs': [costs[idx] for idx in val_ids],
+        'val_js_nodes': [js_nodes[idx] for idx in val_ids],
+        'test_roots': [roots[idx] for idx in test_ids],
+        'test_js_nodes': [js_nodes[idx] for idx in test_ids],
+        'test_costs': [costs[idx] for idx in test_ids],
 
-        'train_ids' : train_ids,
-        'val_ids' : val_ids,
-        'test_ids' : test_ids,
+        'train_ids': train_ids,
+        'val_ids': val_ids,
+        'test_ids': test_ids,
     }
 
 
@@ -189,10 +194,10 @@ def get_tpcds(dat_path):
     df = pd.DataFrame()
     for i in range(21):
         tmp_df = pd.read_csv(dat_path+'long_raw_part{}.csv'.format(i))
-        df = df.append(tmp_df)  
+        df = df.append(tmp_df)
     index_list = get_index(df)
     df.reset_index(drop=True, inplace=True)
-    df = df.loc[df['Index']=='[]'].reset_index(drop=True)
+    df = df.loc[df['Index'] == '[]'].reset_index(drop=True)
 
     roots, js_nodes, idxs = df2nodes(df)
 
@@ -204,44 +209,45 @@ def get_tpcds(dat_path):
     ds_info.construct_from_plans(roots)
     ds_info.get_columns(col_min_max)
 
-    ## split by run_id, TODO, split by query (template) id
+    # split by run_id, TODO, split by query (template) id
     runs = df['Run_id'].unique()
-    train_runs, val_runs, test_runs = np.split(runs,[3,4,],axis=0)
+    train_runs, val_runs, test_runs = np.split(runs, [3, 4, ], axis=0)
     train_ids = df.loc[df['Run_id'].isin(train_runs)].index.tolist()
     val_ids = df.loc[df['Run_id'].isin(val_runs)].index.tolist()
     test_ids = df.loc[df['Run_id'].isin(test_runs)].index.tolist()
 
     return {
-        'ds_info' : ds_info,
-        'data_raw' : df,
-        'indexes' : index_list,
-        'col_min_max' : col_min_max,
-        'total_roots' : roots,
-        'total_costs' : costs,
-        'train_roots' : [roots[idx] for idx in train_ids],
-        'train_costs' : [costs[idx] for idx in train_ids],
-        'train_js_nodes' : [js_nodes[idx] for idx in train_ids],
-        'val_roots' : [roots[idx] for idx in val_ids],
-        'val_costs' : [costs[idx] for idx in val_ids],
-        'val_js_nodes' : [js_nodes[idx] for idx in val_ids],
-        'test_roots' : [roots[idx] for idx in test_ids],
-        'test_js_nodes' : [js_nodes[idx] for idx in test_ids],
-        'test_costs' : [costs[idx] for idx in test_ids],
+        'ds_info': ds_info,
+        'data_raw': df,
+        'indexes': index_list,
+        'col_min_max': col_min_max,
+        'total_roots': roots,
+        'total_costs': costs,
+        'train_roots': [roots[idx] for idx in train_ids],
+        'train_costs': [costs[idx] for idx in train_ids],
+        'train_js_nodes': [js_nodes[idx] for idx in train_ids],
+        'val_roots': [roots[idx] for idx in val_ids],
+        'val_costs': [costs[idx] for idx in val_ids],
+        'val_js_nodes': [js_nodes[idx] for idx in val_ids],
+        'test_roots': [roots[idx] for idx in test_ids],
+        'test_js_nodes': [js_nodes[idx] for idx in test_ids],
+        'test_costs': [costs[idx] for idx in test_ids],
 
-        'train_ids' : train_ids,
-        'val_ids' : val_ids,
-        'test_ids' : test_ids,
+        'train_ids': train_ids,
+        'val_ids': val_ids,
+        'test_ids': test_ids,
     }
 
 
 def get_stats(dat_path):
     df = pd.DataFrame()
     for i in range(71):
-        tmp_df = pd.read_csv(dat_path + 'cost/train_plan_chunk{}_run0.csv'.format(i))
+        tmp_df = pd.read_csv(
+            dat_path + 'cost/train_plan_chunk{}_run0.csv'.format(i))
         df = df.append(tmp_df)
     df.reset_index(drop=True, inplace=True)
     df = df.sample(frac=1, random_state=2).reset_index(drop=True)
-    
+
     roots, js_nodes, idxs = df2nodes(df)
     index_list = get_index(df)
     costs = get_costs(js_nodes)
@@ -255,86 +261,87 @@ def get_stats(dat_path):
     train_roots = roots
     train_costs = costs
     train_js_nodes = js_nodes
-    
+
     df = pd.read_csv(dat_path+'cost/test_plan__run0.csv')
     val_roots, val_js_nodes, _ = df2nodes(df)
     val_costs = get_costs(val_js_nodes)
-    
+
     df = pd.read_csv(dat_path+'cost/workload_plan_run0.csv')
     test_roots, test_js_nodes, _ = df2nodes(df)
     test_costs = get_costs(test_js_nodes)
 
     return {
-        'ds_info' : ds_info,
-        'data_raw' : df,
-        'indexes' : index_list,
-        'col_min_max' : col_min_max,
-        'total_roots' : roots,
-        'total_costs' : costs,
-        'train_roots' : train_roots,
-        'train_costs' : train_costs,
-        'train_js_nodes' : train_js_nodes,
-        'val_roots' : val_roots,
-        'val_costs' : val_costs,
-        'val_js_nodes' : val_js_nodes,
-        'test_roots' : test_roots,
-        'test_js_nodes' : test_js_nodes,
-        'test_costs' : test_costs
+        'ds_info': ds_info,
+        'data_raw': df,
+        'indexes': index_list,
+        'col_min_max': col_min_max,
+        'total_roots': roots,
+        'total_costs': costs,
+        'train_roots': train_roots,
+        'train_costs': train_costs,
+        'train_js_nodes': train_js_nodes,
+        'val_roots': val_roots,
+        'val_costs': val_costs,
+        'val_js_nodes': val_js_nodes,
+        'test_roots': test_roots,
+        'test_js_nodes': test_js_nodes,
+        'test_costs': test_costs
     }
+
 
 stats_schema = {
     'REL_NAMES': [
-    'badges', 
-    'comments', 
-    'posthistory', 
-    'postlinks', 
-    'posts', 
-    'tags',
-    'users',
-    'votes'],
-    'REL_ATTR_LIST_DICT' : {'badges': ['Id', 'UserId', 'Date'],
- 'comments': ['Id', 'PostId', 'Score', 'CreationDate', 'UserId'],
- 'posthistory': ['Id',
-  'PostHistoryTypeId',
-  'PostId',
-  'CreationDate',
-  'UserId'],
- 'postlinks': ['Id', 'CreationDate', 'PostId', 'RelatedPostId', 'LinkTypeId'],
- 'posts': ['Id',
-  'PostTypeId',
-  'CreationDate',
-  'Score',
-  'ViewCount',
-  'OwnerUserId',
-  'AnswerCount',
-  'CommentCount',
-  'FavoriteCount',
-  'LastEditorUserId'],
- 'tags': ['Id', 'Count', 'ExcerptPostId'],
- 'users': ['Id',
-  'Reputation',
-  'CreationDate',
-  'Views',
-  'UpVotes',
-  'DownVotes'],
- 'votes': ['Id',
-  'PostId',
-  'VoteTypeId',
-  'CreationDate',
-  'UserId',
-  'BountyAmount']}}
+        'badges',
+        'comments',
+        'posthistory',
+        'postlinks',
+        'posts',
+        'tags',
+        'users',
+        'votes'],
+    'REL_ATTR_LIST_DICT': {'badges': ['Id', 'UserId', 'Date'],
+                           'comments': ['Id', 'PostId', 'Score', 'CreationDate', 'UserId'],
+                           'posthistory': ['Id',
+                                           'PostHistoryTypeId',
+                                           'PostId',
+                                           'CreationDate',
+                                           'UserId'],
+                           'postlinks': ['Id', 'CreationDate', 'PostId', 'RelatedPostId', 'LinkTypeId'],
+                           'posts': ['Id',
+                                     'PostTypeId',
+                                     'CreationDate',
+                                     'Score',
+                                     'ViewCount',
+                                     'OwnerUserId',
+                                     'AnswerCount',
+                                     'CommentCount',
+                                     'FavoriteCount',
+                                     'LastEditorUserId'],
+                           'tags': ['Id', 'Count', 'ExcerptPostId'],
+                           'users': ['Id',
+                                     'Reputation',
+                                     'CreationDate',
+                                     'Views',
+                                     'UpVotes',
+                                     'DownVotes'],
+                           'votes': ['Id',
+                                     'PostId',
+                                     'VoteTypeId',
+                                     'CreationDate',
+                                     'UserId',
+                                     'BountyAmount']}}
 
 
 imdb_schema = {
     'REL_NAMES': [
-        'title', 
-        'movie_companies', 
-        'cast_info', 
-        'movie_info_idx', 
-        'movie_keyword', 
+        'title',
+        'movie_companies',
+        'cast_info',
+        'movie_info_idx',
+        'movie_keyword',
         'movie_info'
     ],
-    'REL_ATTR_LIST_DICT' : {
+    'REL_ATTR_LIST_DICT': {
         'title':
             ['t.id',
              't.kind_id',
@@ -371,17 +378,17 @@ imdb_schema = {
 
 
 tpch_schema = {
-    'REL_NAMES' : [
-        'customer', 
-        'lineitem', 
-        'nation', 
-        'orders', 
-        'part', 
-        'partsupp', 
-        'region', 
+    'REL_NAMES': [
+        'customer',
+        'lineitem',
+        'nation',
+        'orders',
+        'part',
+        'partsupp',
+        'region',
         'supplier'
     ],
-    'REL_ATTR_LIST_DICT' : {
+    'REL_ATTR_LIST_DICT': {
         'customer':
             ['c_custkey',
              'c_name',
@@ -456,11 +463,11 @@ tpch_schema = {
 
 
 tpcds_schema = {
-    'REL_NAMES' : ['store_sales', 'store_returns', 'catalog_sales', 'catalog_returns', 'web_sales', 'web_returns', 
-        'inventory', 'store', 'call_center', 'catalog_page', 'web_site',  'web_page', 'warehouse', 
-        'customer', 'customer_address', 'customer_demographics', 'date_dim', 'household_demographics', 
-        'item', 'income_band', 'promotion', 'reason', 'ship_mode', 'time_dim'],
-    'REL_ATTR_LIST_DICT' : {
+    'REL_NAMES': ['store_sales', 'store_returns', 'catalog_sales', 'catalog_returns', 'web_sales', 'web_returns',
+                  'inventory', 'store', 'call_center', 'catalog_page', 'web_site',  'web_page', 'warehouse',
+                  'customer', 'customer_address', 'customer_demographics', 'date_dim', 'household_demographics',
+                  'item', 'income_band', 'promotion', 'reason', 'ship_mode', 'time_dim'],
+    'REL_ATTR_LIST_DICT': {
         'store_sales':
             ['ss_sold_date_sk',
              'ss_sold_time_sk',
